@@ -273,13 +273,13 @@ try:
         log_file.close()
 
 
-    if enable_file_logging:
-        sys.stdout = ComfyUIManagerLogger(True)
-        sys.stderr = ComfyUIManagerLogger(False)
+    # if enable_file_logging:
+    #     sys.stdout = ComfyUIManagerLogger(True)
+    #     sys.stderr = ComfyUIManagerLogger(False)
 
-        atexit.register(close_log)
-    else:
-        sys.stdout.close_log = lambda: None
+    #     atexit.register(close_log)
+    # else:
+    #     sys.stdout.close_log = lambda: None
 
 except Exception as e:
     print(f"[ComfyUI-Manager] Logging failed: {e}")

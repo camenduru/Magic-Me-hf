@@ -5,6 +5,30 @@ from typing import Sequence, Mapping, Any, Union
 import torch
 import gradio as gr
 
+import logging.config
+LOGGING_CONFIG = {
+    'version': 1,
+    'formatters': {
+        'default': {  # This is the formatter named 'default'
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',  # Reference to the 'default' formatter
+        },
+    },
+    'loggers': {
+        '': {  # root logger
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+# Assuming LOGGING_CONFIG is the dictionary defined above
+logging.config.dictConfig(LOGGING_CONFIG)
 
 def get_value_at_index(obj: Union[Sequence, Mapping], index: int) -> Any:
     """Returns the value at the given index of a sequence or mapping.
@@ -419,43 +443,43 @@ css = """
 examples = [
     # 1-ToonYou
     [
-        "toonyou_beta3.safetensors", 
-        "mm_sd_v14.ckpt", 
+        # "toonyou_beta3.safetensors", 
+        # "mm_sd_v14.ckpt", 
         "masterpiece, best quality, 1girl, solo, cherry blossoms, hanami, pink flower, white flower, spring season, wisteria, petals, flower, plum blossoms, outdoors, falling petals, white hair, black eyes",
         "worst quality, low quality, nsfw, logo",
-        512, 512, "13204175718326964000"
+        # 512, 512, "13204175718326964000"
     ],
     # 2-Lyriel
     [
-        "lyriel_v16.safetensors", 
-        "mm_sd_v15.ckpt", 
+        # "lyriel_v16.safetensors", 
+        # "mm_sd_v15.ckpt", 
         "A forbidden castle high up in the mountains, pixel art, intricate details2, hdr, intricate details, hyperdetailed5, natural skin texture, hyperrealism, soft light, sharp, game art, key visual, surreal",
         "3d, cartoon, anime, sketches, worst quality, low quality, normal quality, lowres, normal quality, monochrome, grayscale, skin spots, acnes, skin blemishes, bad anatomy, girl, loli, young, large breasts, red eyes, muscular",
-        512, 512, "6681501646976930000"
+        # 512, 512, "6681501646976930000"
     ],
     # 3-RCNZ
     [
-        "rcnzCartoon3d_v10.safetensors", 
-        "mm_sd_v14.ckpt", 
+        # "rcnzCartoon3d_v10.safetensors", 
+        # "mm_sd_v14.ckpt", 
         "Jane Eyre with headphones, natural skin texture,4mm,k textures, soft cinematic light, adobe lightroom, photolab, hdr, intricate, elegant, highly detailed, sharp focus, cinematic look, soothing tones, insane details, intricate details, hyperdetailed, low contrast, soft cinematic light, dim colors, exposure blend, hdr, faded",
         "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, mutated hands and fingers, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
-        512, 512, "2416282124261060"
+        # 512, 512, "2416282124261060"
     ],
     # 4-MajicMix
     [
-        "majicmixRealistic_v5Preview.safetensors", 
-        "mm_sd_v14.ckpt", 
+        # "majicmixRealistic_v5Preview.safetensors", 
+        # "mm_sd_v14.ckpt", 
         "1girl, offshoulder, light smile, shiny skin best quality, masterpiece, photorealistic",
         "bad hand, worst quality, low quality, normal quality, lowres, bad anatomy, bad hands, watermark, moles",
-        512, 512, "7132772652786303"
+        # 512, 512, "7132772652786303"
     ],
     # 5-RealisticVision
     [
-        "realisticVisionV20_v20.safetensors", 
-        "mm_sd_v15.ckpt", 
+        # "realisticVisionV20_v20.safetensors", 
+        # "mm_sd_v15.ckpt", 
         "photo of coastline, rocks, storm weather, wind, waves, lightning, 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
         "blur, haze, deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
-        512, 512, "1490157606650685400"
+        # 512, 512, "1490157606650685400"
     ]
 ]
 
@@ -485,23 +509,23 @@ def ui():
         )
         with gr.Row():
             with gr.Column():
-                base_model_dropdown     = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list,    value=c.base_model_list[0],    interactive=True )
-                motion_module_dropdown  = gr.Dropdown( label="Motion Module",  choices=c.motion_module_list, value=c.motion_module_list[0], interactive=True )
+                # base_model_dropdown     = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list,    value=c.base_model_list[0],    interactive=True )
+                # motion_module_dropdown  = gr.Dropdown( label="Motion Module",  choices=c.motion_module_list, value=c.motion_module_list[0], interactive=True )
 
-                base_model_dropdown.change(fn=c.update_base_model,       inputs=[base_model_dropdown],    outputs=[base_model_dropdown])
-                motion_module_dropdown.change(fn=c.update_motion_module, inputs=[motion_module_dropdown], outputs=[motion_module_dropdown])
+                # base_model_dropdown.change(fn=c.update_base_model,       inputs=[base_model_dropdown],    outputs=[base_model_dropdown])
+                # motion_module_dropdown.change(fn=c.update_motion_module, inputs=[motion_module_dropdown], outputs=[motion_module_dropdown])
 
                 prompt_textbox          = gr.Textbox( label="Prompt",          lines=3 )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="worst quality, low quality, nsfw, logo")
 
-                with gr.Accordion("Advance", open=False):
-                    with gr.Row():
-                        width_slider  = gr.Slider(  label="Width",  value=512, minimum=256, maximum=1024, step=64 )
-                        height_slider = gr.Slider(  label="Height", value=512, minimum=256, maximum=1024, step=64 )
-                    with gr.Row():
-                        seed_textbox = gr.Textbox( label="Seed",  value=-1)
-                        seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
-                        seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
+                # with gr.Accordion("Advance", open=False):
+                #     with gr.Row():
+                #         width_slider  = gr.Slider(  label="Width",  value=512, minimum=256, maximum=1024, step=64 )
+                #         height_slider = gr.Slider(  label="Height", value=512, minimum=256, maximum=1024, step=64 )
+                #     with gr.Row():
+                #         seed_textbox = gr.Textbox( label="Seed",  value=-1)
+                #         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
+                #         seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
 
                 generate_button = gr.Button( value="Generate", variant='primary' )
 
@@ -509,12 +533,12 @@ def ui():
                 result_video = gr.Video( label="Generated Animation", interactive=False )
                 json_config  = gr.Json( label="Config", value=None )
 
-            inputs  = [base_model_dropdown, motion_module_dropdown, prompt_textbox, negative_prompt_textbox, width_slider, height_slider, seed_textbox]
+            inputs  = [prompt_textbox, negative_prompt_textbox]
             outputs = [result_video, json_config]
             
             generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
                 
-        gr.Examples( fn=c.run_once(), examples=examples, inputs=inputs, outputs=outputs, cache_examples=True )
+        # gr.Examples( fn=c.run_once, examples=examples, inputs=inputs, outputs=outputs, cache_examples=True )
         
     return demo
 
@@ -522,4 +546,4 @@ def ui():
 if __name__ == "__main__":
     demo = ui()
     demo.queue(max_size=20)
-    demo.launch(server_port=8860)
+    demo.launch()
