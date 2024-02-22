@@ -154,11 +154,16 @@ class MagicMeController:
         self.id_embed_dir = "models/embeddings"
         self.save_dir = "output"
         self.base_model_dir = "models/checkpoints"
+        self.base_model_list = []
         self.selected_base_model = "realisticVision_v51.safetensors"
+        self.motion_lora_dir = "custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+        self.motion_lora_list = []
+        self.selected_motion_lora = "v2_lora_ZoomIn.ckpt"
         self.id_embed_list = []
         self.woman_id_embed_list = ["beyonce", "hermione", "lifeifei", "lisa", "mona", "monroe", "taylor", "scarlett"]
         self.refresh_id_embed_list()
         self.refresh_base_model_list()
+        self.refresh_motion_lora_list()
         
         with torch.inference_mode():
             vaeloader = VAELoader()
@@ -201,7 +206,7 @@ class MagicMeController:
 
             ade_animatediffloraloader = NODE_CLASS_MAPPINGS["ADE_AnimateDiffLoRALoader"]()
             self.ade_animatediffloraloader_196 = ade_animatediffloraloader.load_motion_lora(
-                lora_name="v2_lora_ZoomIn.ckpt", strength=0.6
+                lora_name=self.selected_motion_lora, strength=0.6
             )
 
             impactint = NODE_CLASS_MAPPINGS["ImpactInt"]()
@@ -235,9 +240,23 @@ class MagicMeController:
         id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
         self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
+
+    def refresh_motion_lora_list(self):
+        motion_lora_list = glob(os.path.join(self.motion_lora_list, "*.ckpt"))
+        self.motion_lora_list = [os.path.basename(p)for p in motion_lora_list]
+
+
     def refresh_base_model_list(self):
         base_model_list = glob(os.path.join(self.base_model_dir, "*.safetensors"))
         self.base_model_list = [os.path.basename(p)for p in base_model_list]
+        
+    def update_motion_lora(self, base_model_dropdown):        
+        self.selected_base_model = base_model_dropdown
+        checkpointloadersimple = CheckpointLoaderSimple()
+        self.checkpointloadersimple_32 = checkpointloadersimple.load_checkpoint(
+            ckpt_name=self.selected_base_model
+        )
+        return gr.Dropdown.update()
 
 
     def update_base_model(self, base_model_dropdown):        
@@ -248,10 +267,18 @@ class MagicMeController:
         )
         return gr.Dropdown.update()
     
-    
+    def update_motion_lora(self, motion_lora_dropdown):        
+        self.selected_motion_lora = motion_lora_dropdown
+        ade_animatediffloraloader = NODE_CLASS_MAPPINGS["ADE_AnimateDiffLoRALoader"]()
+        self.ade_animatediffloraloader_196 = ade_animatediffloraloader.load_motion_lora(
+            lora_name=self.selected_motion_lora, strength=0.6
+        )
+        return gr.Dropdown.update()
 
-    def run_t2v_face_tiled(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+
+    def run_t2v_face_tiled(self, base_model_dropdown, motion_lora_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
         if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+        if self.selected_motion_lora != motion_lora_dropdown: self.update_motion_lora(motion_lora_dropdown)
 
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
@@ -477,14 +504,17 @@ class MagicMeController:
             "n_prompt": negative_prompt_text_box,
             "id_embed_dropdown": id_embed_dropdown,
             "gaussian_slider": gaussian_slider,
-            "seed_text_box": seed_text_box
+            "seed_text_box": seed_text_box,
+            "motion_lora_dropdown": motion_lora_dropdown,
+            "base_model_dropdown": base_model_dropdown
         }
         return gr.Video.update(value=orig_video_path), gr.Video.update(value=face_detailer_video_path),gr.Video.update(value=sr_video_path), gr.Json.update(value=json_config)
 
 
 
-    def run_t2v_face(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+    def run_t2v_face(self, base_model_dropdown, motion_lora_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
         if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+        if self.selected_motion_lora != motion_lora_dropdown: self.update_motion_lora(motion_lora_dropdown)
 
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
@@ -657,15 +687,18 @@ class MagicMeController:
             "n_prompt": negative_prompt_text_box,
             "id_embed_dropdown": id_embed_dropdown,
             "gaussian_slider": gaussian_slider,
-            "seed_text_box": seed_text_box
+            "seed_text_box": seed_text_box,
+            "motion_lora_dropdown": motion_lora_dropdown,
+            "base_model_dropdown": base_model_dropdown
         }
         return gr.Video.update(value=orig_video_path), gr.Video.update(value=face_detailer_video_path), gr.Json.update(value=json_config)
 
 
 
 
-    def run_t2v(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+    def run_t2v(self, base_model_dropdown, motion_lora_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
         if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+        if self.selected_motion_lora != motion_lora_dropdown: self.update_motion_lora(motion_lora_dropdown)
 
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
@@ -781,12 +814,15 @@ class MagicMeController:
         orig_video_path = sorted(glob(os.path.join(self.save_dir, 'orig*.mp4')))[-1]
     
         json_config = {
+            "base_model_dropdown": base_model_dropdown,
+            "motion_lora_dropdown": motion_lora_dropdown,
             "prompt": prompt,
             "n_prompt": negative_prompt_text_box,
             "id_embed_dropdown": id_embed_dropdown,
             "gaussian_slider": gaussian_slider,
-            "seed_text_box": seed_text_box
+            "seed_text_box": seed_text_box,
         }
+        
         return gr.Video.update(value=orig_video_path), gr.Json.update(value=json_config)
 
 
@@ -807,46 +843,26 @@ css = """
 
 
 examples = [
-    # 1-ToonYou
+    # 1-Realistic Vision
     [
-        # "toonyou_beta3.safetensors", 
-        # "mm_sd_v14.ckpt", 
-        "masterpiece, best quality, 1girl, solo, cherry blossoms, hanami, pink flower, white flower, spring season, wisteria, petals, flower, plum blossoms, outdoors, falling petals, white hair, black eyes",
-        "worst quality, low quality, nsfw, logo",
-        # 512, 512, "13204175718326964000"
+        "realisticVision_v51.safetensors", 
+        "v2_lora_ZoomIn.ckpt", 
+        "a photo of embedding:altman man in superman costume in the outer space, stars in the background",
+        "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream",
+        "altman",
+        0.2,
+        3323153235
     ],
-    # 2-Lyriel
+    # 2-RCNZ
     [
-        # "lyriel_v16.safetensors", 
-        # "mm_sd_v15.ckpt", 
-        "A forbidden castle high up in the mountains, pixel art, intricate details2, hdr, intricate details, hyperdetailed5, natural skin texture, hyperrealism, soft light, sharp, game art, key visual, surreal",
-        "3d, cartoon, anime, sketches, worst quality, low quality, normal quality, lowres, normal quality, monochrome, grayscale, skin spots, acnes, skin blemishes, bad anatomy, girl, loli, young, large breasts, red eyes, muscular",
-        # 512, 512, "6681501646976930000"
+        "rcnzCartoon3d_v10.safetensors", 
+        "v2_lora_ZoomIn.ckpt", 
+        "a photo of embedding:altman man in superman costume in the outer space, stars in the background",
+        "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream",
+        "altman",
+        0.2,
+        4164379572666061
     ],
-    # 3-RCNZ
-    [
-        # "rcnzCartoon3d_v10.safetensors", 
-        # "mm_sd_v14.ckpt", 
-        "Jane Eyre with headphones, natural skin texture,4mm,k textures, soft cinematic light, adobe lightroom, photolab, hdr, intricate, elegant, highly detailed, sharp focus, cinematic look, soothing tones, insane details, intricate details, hyperdetailed, low contrast, soft cinematic light, dim colors, exposure blend, hdr, faded",
-        "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, mutated hands and fingers, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
-        # 512, 512, "2416282124261060"
-    ],
-    # 4-MajicMix
-    [
-        # "majicmixRealistic_v5Preview.safetensors", 
-        # "mm_sd_v14.ckpt", 
-        "1girl, offshoulder, light smile, shiny skin best quality, masterpiece, photorealistic",
-        "bad hand, worst quality, low quality, normal quality, lowres, bad anatomy, bad hands, watermark, moles",
-        # 512, 512, "7132772652786303"
-    ],
-    # 5-RealisticVision
-    [
-        # "realisticVisionV20_v20.safetensors", 
-        # "mm_sd_v15.ckpt", 
-        "photo of coastline, rocks, storm weather, wind, waves, lightning, 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "blur, haze, deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
-        # 512, 512, "1490157606650685400"
-    ]
 ]
 
 
@@ -863,9 +879,9 @@ def ui():
         gr.Markdown(
             """
             ### Quick Start
-            1. Select desired `ID embedding`.
+            1. Select desired `ID embedding`. There are more advanced settings in the drop-down menu `Advanced`.
             2. Provide `Prompt` and `Negative Prompt`. Please use propoer pronoun for the character's gender.
-            3. Click on one of three `Go buttons. The fewer the running modules, the less time you need to wait. Enjoy!
+            3. Click on one of three `Go` buttons. The fewer the running modules, the less time you need to wait. Enjoy!
             """
         )
         with gr.Row():
@@ -875,32 +891,32 @@ def ui():
                 prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
                 with gr.Row():
-                    seed_textbox = gr.Textbox( label="Seed",  value=random.randint(1, 2 ** 32))
+                    seed_textbox = gr.Textbox( label="Seed (change to get various videos)",  value=random.randint(1, 2 ** 32))
                     seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
                     seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
 
 
             with gr.Column():
                 with gr.Accordion("Advance", open=False):
-                    with gr.Row():
-                        base_model_dropdown = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list, value=c.selected_base_model, interactive=True )
-                        base_model_dropdown.change(fn=c.update_base_model, inputs=[base_model_dropdown], outputs=[base_model_dropdown])
+                    base_model_dropdown = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list, value=c.selected_base_model, interactive=True)
+                    base_model_dropdown.change(fn=c.update_base_model, inputs=[base_model_dropdown], outputs=[base_model_dropdown])
+                    motion_lora_dropdown = gr.Dropdown( label="Motion LoRA Model", choices=c.motion_lora_list, value=c.selected_motion_lora, interactive=True)
+                    motion_lora_dropdown.change(fn=c.update_motion_lora, inputs=[motion_lora_dropdown], outputs=[motion_lora_dropdown])
 
-                    with gr.Row():
-                        gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
+                gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
                 json_config  = gr.Json(label="Output Config", value=None )
                 
         with gr.Row():
             generate_button_t2v = gr.Button( value="Go (T2V VCD)", variant='primary' )
-            generate_button_face = gr.Button( value="Go (T2V + Face VCD)", variant='primary' )
-            generate_button_tiled = gr.Button( value="Go (T2V + Face + Tiled VCD)", variant='primary' )
+            generate_button_face = gr.Button( value="Go (T2V + Face VCD, 2X slower)", variant='primary' )
+            generate_button_tiled = gr.Button( value="Go (T2V + Face + Tiled VCD, 8X slower)", variant='primary' )
         
         with gr.Row():
             orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
             face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
             sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
 
-        inputs  = [base_model_dropdown, prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
+        inputs  = [base_model_dropdown, motion_lora_dropdown, prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
         outputs_t2v = [orig_video, json_config]
         outputs_t2v_face = [orig_video, face_detailer_video, json_config]
         outputs_t2v_face_tiled = [orig_video, face_detailer_video, sr_video, json_config]
@@ -909,7 +925,7 @@ def ui():
         generate_button_face.click( fn=c.run_t2v_face, inputs=inputs, outputs=outputs_t2v_face )
         generate_button_tiled.click( fn=c.run_t2v_face_tiled, inputs=inputs, outputs=outputs_t2v_face_tiled )
                 
-        # gr.Examples( fn=c.run_once, examples=examples, inputs=inputs, outputs=outputs, cache_examples=True )
+        gr.Examples( fn=c.run_t2v_face_tiled, examples=examples, inputs=inputs, outputs=outputs_t2v_face_tiled, cache_examples=True )
         
     return demo
 
