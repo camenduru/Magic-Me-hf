@@ -244,6 +244,10 @@ class MagicMeController:
         prompt = f"a photo of embedding:{self.selected_id_embed} {category} "  + prompt_text_box
         print("prompt:", prompt)
         print("negative_prompt_text_box:", negative_prompt_text_box)
+        print("id_embed_dropdown:", id_embed_dropdown)
+        print("gaussian_slider:", gaussian_slider)
+        print("seed_text_box:", seed_text_box)
+        seed_text_box = int(seed_text_box)
         with torch.inference_mode():
             cliptextencode = CLIPTextEncode()
             cliptextencode_6 = cliptextencode.encode(
@@ -529,32 +533,21 @@ def ui():
     with gr.Blocks(css=css) as demo:
         gr.Markdown(
             """
-            # AnimateDiff: Animate Your Personalized Text-to-Image Diffusion Models without Specific Tuning
-            Yuwei Guo, Ceyuan Yang*, Anyi Rao, Yaohui Wang, Yu Qiao, Dahua Lin, Bo Dai (*Corresponding Author)<br>
-            [Arxiv Report](https://arxiv.org/abs/2307.04725) | [Project Page](https://animatediff.github.io/) | [Github](https://github.com/guoyww/animatediff/)
+            # Magic-Me: Identity-Specific Video Customized Diffusion
+            Ze Ma*, Daquan Zhou* †, Chun-Hsiao Yeh, Xue-She Wang, Xiuyu Li, Huanrui Yang, Zhen Dong †, Kurt Keutzer, Jiashi Feng (*Joint First Author, † Corresponding Author)
+            [Arxiv Report](https://arxiv.org/abs/2402.09368) | [Project Page](https://magic-me-webpage.github.io/) | [Github](https://github.com/Zhen-Dong/Magic-Me)
             """
         )
         gr.Markdown(
             """
             ### Quick Start
-            1. Select desired `Base DreamBooth Model`.
-            2. Select `Motion Module` from `mm_sd_v14.ckpt` and `mm_sd_v15.ckpt`. We recommend trying both of them for the best results.
-            3. Provide `Prompt` and `Negative Prompt` for each model. You are encouraged to refer to each model's webpage on CivitAI to learn how to write prompts for them. Below are the DreamBooth models in this demo. Click to visit their homepage.
-                - [`toonyou_beta3.safetensors`](https://civitai.com/models/30240?modelVersionId=78775)
-                - [`lyriel_v16.safetensors`](https://civitai.com/models/22922/lyriel)
-                - [`rcnzCartoon3d_v10.safetensors`](https://civitai.com/models/66347?modelVersionId=71009)
-                - [`majicmixRealistic_v5Preview.safetensors`](https://civitai.com/models/43331?modelVersionId=79068)
-                - [`realisticVisionV20_v20.safetensors`](https://civitai.com/models/4201?modelVersionId=29460)
-            4. Click `Generate`, wait for ~1 min, and enjoy.
+            1. Select desired `ID embedding`.
+            2. Provide `Prompt` and `Negative Prompt` for each model. Please use propoer pronoun for the character's gender.
+            4. Click `Generate`, wait for ~5 min, and enjoy.
             """
         )
         with gr.Row():
             with gr.Column():
-                # id_embed_dropdown     = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list,    value=c.base_model_list[0],    interactive=True )
-                # motion_module_dropdown  = gr.Dropdown( label="Motion Module",  choices=c.motion_module_list, value=c.motion_module_list[0], interactive=True )
-
-                # id_embed_dropdown.change(fn=c.update_base_model,       inputs=[id_embed_dropdown],    outputs=[id_embed_dropdown])
-                # motion_module_dropdown.change(fn=c.update_motion_module, inputs=[motion_module_dropdown], outputs=[motion_module_dropdown])
                 id_embed_dropdown = gr.Dropdown( label="ID Embedding", choices=c.id_embed_list,    value=c.id_embed_list[0],    interactive=True )
                 id_embed_dropdown.change(fn=c.update_id_embed,       inputs=[id_embed_dropdown],    outputs=[id_embed_dropdown])
 
