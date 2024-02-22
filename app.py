@@ -233,7 +233,7 @@ class MagicMeController:
         self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
     def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
-        category = "woman" if self.selected_id_embed in self.woman_id_embed_list else "man"
+        category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
         print("negative_prompt_text_box:", negative_prompt_text_box)
@@ -536,7 +536,7 @@ def ui():
             """
             ### Quick Start
             1. Select desired `ID embedding`.
-            2. Provide `Prompt` and `Negative Prompt` for each model. Please use propoer pronoun for the character's gender.
+            2. Provide `Prompt` and `Negative Prompt`. Please use propoer pronoun for the character's gender.
             4. Click `Generate`, wait for ~5 min, and enjoy.
             """
         )
