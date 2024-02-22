@@ -153,9 +153,12 @@ class MagicMeController:
     def __init__(self):
         self.id_embed_dir = "models/embeddings"
         self.save_dir = "output"
+        self.base_model_dir = "models/checkpoints"
+        self.selected_base_model = "realisticVision_v51.safetensors"
         self.id_embed_list = []
         self.woman_id_embed_list = ["beyonce", "hermione", "lifeifei", "lisa", "mona", "monroe", "taylor", "scarlett"]
-        self.refresh_id_embed()
+        self.refresh_id_embed_list()
+        self.refresh_base_model_list()
         
         with torch.inference_mode():
             vaeloader = VAELoader()
@@ -165,7 +168,7 @@ class MagicMeController:
 
             checkpointloadersimple = CheckpointLoaderSimple()
             self.checkpointloadersimple_32 = checkpointloadersimple.load_checkpoint(
-                ckpt_name="realisticVision_v51.safetensors"
+                ckpt_name=self.selected_base_model 
             )
 
 
@@ -228,13 +231,28 @@ class MagicMeController:
 
 
 
-    def refresh_id_embed(self):
+    def refresh_id_embed_list(self):
         id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
         self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
+    def refresh_base_model_list(self):
+        base_model_list = glob(os.path.join(self.base_model_dir, "*.safetensors"))
+        self.base_model_list = [os.path.basename(p)for p in base_model_list]
 
 
-    def run_t2v_face_tiled(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+    def update_base_model(self, base_model_dropdown):        
+        self.selected_base_model = base_model_dropdown
+        checkpointloadersimple = CheckpointLoaderSimple()
+        self.checkpointloadersimple_32 = checkpointloadersimple.load_checkpoint(
+            ckpt_name=self.selected_base_model
+        )
+        return gr.Dropdown.update()
+    
+    
+
+    def run_t2v_face_tiled(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+        if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
@@ -465,7 +483,9 @@ class MagicMeController:
 
 
 
-    def run_t2v_face(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+    def run_t2v_face(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+        if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
@@ -644,7 +664,9 @@ class MagicMeController:
 
 
 
-    def run_t2v(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+    def run_t2v(self, base_model_dropdown, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+        if self.selected_base_model != base_model_dropdown: self.update_base_model(base_model_dropdown)
+
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
@@ -852,19 +874,22 @@ def ui():
 
                 prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
+                with gr.Row():
+                    seed_textbox = gr.Textbox( label="Seed",  value=random.randint(1, 2 ** 32))
+                    seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
+                    seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
 
-
-                
 
             with gr.Column():
                 with gr.Accordion("Advance", open=False):
                     with gr.Row():
-                        gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
+                        base_model_dropdown = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list, value=c.selected_base_model, interactive=True )
+                        base_model_dropdown.change(fn=c.update_base_model, inputs=[base_model_dropdown], outputs=[base_model_dropdown])
+
                     with gr.Row():
-                        seed_textbox = gr.Textbox( label="Seed",  value=random.randint(1, 2 ** 32))
-                        seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
-                        seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
-                json_config  = gr.Json(label="Config", value=None )
+                        gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
+                json_config  = gr.Json(label="Output Config", value=None )
+                
         with gr.Row():
             generate_button_t2v = gr.Button( value="Go (T2V VCD)", variant='primary' )
             generate_button_face = gr.Button( value="Go (T2V + Face VCD)", variant='primary' )
@@ -875,7 +900,7 @@ def ui():
             face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
             sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
 
-        inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
+        inputs  = [base_model_dropdown, prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
         outputs_t2v = [orig_video, json_config]
         outputs_t2v_face = [orig_video, face_detailer_video, json_config]
         outputs_t2v_face_tiled = [orig_video, face_detailer_video, sr_video, json_config]
