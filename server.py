@@ -30,7 +30,7 @@ from comfy.cli_args import args
 import comfy.utils
 import comfy.model_management
 
-from app.user_manager import UserManager
+from app_setting.user_manager import UserManager
 
 class BinaryEventTypes:
     PREVIEW_IMAGE = 1
