@@ -232,7 +232,9 @@ class MagicMeController:
         id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
         self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
-    def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+
+
+    def run_t2v_face_tiled(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
         category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
         prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
@@ -463,6 +465,310 @@ class MagicMeController:
 
 
 
+    def run_t2v_face(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+        category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
+        prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
+        print("prompt:", prompt)
+        print("negative_prompt_text_box:", negative_prompt_text_box)
+        print("id_embed_dropdown:", id_embed_dropdown)
+        print("gaussian_slider:", gaussian_slider)
+        print("seed_text_box:", seed_text_box)
+        seed_text_box = int(seed_text_box)
+        with torch.inference_mode():
+            cliptextencode = CLIPTextEncode()
+            cliptextencode_6 = cliptextencode.encode(
+                text=negative_prompt_text_box,
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+            )
+            cliptextencode_274 = cliptextencode.encode(
+                text=prompt,
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+            )
+            ade_animatediffloaderwithcontext_261 = (
+                            self.ade_animatediffloaderwithcontext.load_mm_and_inject_params(
+                                model_name="mm_sd_v15_v2.ckpt",
+                                beta_schedule="autoselect",
+                                motion_scale=1,
+                                apply_v2_models_properly=True,
+                                model=get_value_at_index(self.checkpointloadersimple_32, 0),
+                                context_options=get_value_at_index(
+                                    self.ade_animatediffuniformcontextoptions_102, 0
+                                ),
+                                motion_lora=get_value_at_index(self.ade_animatediffloraloader_196, 0),
+                            )
+                        )
+
+            freeu_v2_151 = self.freeu_v2.patch(
+                b1=1.1,
+                b2=1.2,
+                s1=0.9,
+                s2=0.4,
+                model=get_value_at_index(ade_animatediffloaderwithcontext_261, 0),
+            )
+
+            tobasicpipe_42 = self.tobasicpipe.doit(
+                model=get_value_at_index(freeu_v2_151, 0),
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+                vae=get_value_at_index(self.vaeloader_2, 0),
+                positive=get_value_at_index(cliptextencode_274, 0),
+                negative=get_value_at_index(cliptextencode_6, 0),
+            )
+
+            frombasicpipe_52 = self.frombasicpipe.doit(
+                basic_pipe=get_value_at_index(tobasicpipe_42, 0)
+            )
+
+            bnk_getsigma_254 = self.bnk_getsigma.calc_sigma(
+                sampler_name="dpmpp_2m",
+                scheduler="karras",
+                steps=20,
+                start_at_step=0,
+                end_at_step=20,
+                model=get_value_at_index(frombasicpipe_52, 0),
+            )
+
+            emptylatentimage_223 = self.emptylatentimage.generate(
+                width=512, height=512, batch_size=get_value_at_index(self.impactint_204, 0)
+            )
+
+            magicalbum3dgaussiannoise_262 = self.magicalbum3dgaussiannoise.generate(
+                width=512,
+                height=512,
+                batch_size=get_value_at_index(self.impactint_204, 0),
+                seed=seed_text_box,
+                cov_factor=gaussian_slider,
+            )
+
+            bnk_injectnoise_253 = self.bnk_injectnoise.inject_noise(
+                strength=get_value_at_index(bnk_getsigma_254, 0),
+                latents=get_value_at_index(emptylatentimage_223, 0),
+                noise=get_value_at_index(magicalbum3dgaussiannoise_262, 0),
+            )
+
+            ksampleradvanced_248 = self.ksampleradvanced.sample(
+                add_noise="disable",
+                noise_seed=seed_text_box,
+                steps=20,
+                cfg=8,
+                sampler_name="dpmpp_2m",
+                scheduler="karras",
+                start_at_step=0,
+                end_at_step=20,
+                return_with_leftover_noise="disable",
+                model=get_value_at_index(frombasicpipe_52, 0),
+                positive=get_value_at_index(frombasicpipe_52, 3),
+                negative=get_value_at_index(frombasicpipe_52, 4),
+                latent_image=get_value_at_index(bnk_injectnoise_253, 0),
+            )
+
+            vaedecode_10 = self.vaedecode.decode(
+                samples=get_value_at_index(ksampleradvanced_248, 0),
+                vae=get_value_at_index(frombasicpipe_52, 2),
+            )
+
+            vhs_videocombine_35 = self.vhs_videocombine.combine_video(
+                frame_rate=8,
+                loop_count=0,
+                filename_prefix="orig",
+                format="video/h264-mp4",
+                pingpong=False,
+                save_output=True,
+                images=get_value_at_index(vaedecode_10, 0),
+                unique_id=2001771405939721385,
+            )
+
+            impactsimpledetectorsegs_for_ad_156 = self.impactsimpledetectorsegs_for_ad.doit(
+                bbox_threshold=0.5,
+                bbox_dilation=0,
+                crop_factor=3,
+                drop_size=10,
+                sub_threshold=0.5,
+                sub_dilation=0,
+                sub_bbox_expansion=0,
+                sam_mask_hint_threshold=0.7,
+                masking_mode="Pivot SEGS",
+                segs_pivot="Combined mask",
+                bbox_detector=get_value_at_index(self.ultralyticsdetectorprovider_75, 0),
+                image_frames=get_value_at_index(vaedecode_10, 0),
+                sam_model_opt=get_value_at_index(self.samloader_78, 0),
+            )
+
+            segsdetailerforanimatediff_41 = self.segsdetailerforanimatediff.doit(
+                guide_size=512,
+                guide_size_for=False,
+                max_size=512,
+                seed=seed_text_box,
+                steps=20,
+                cfg=8,
+                sampler_name="euler",
+                scheduler="normal",
+                denoise=0.8,
+                refiner_ratio=0.2,
+                image_frames=get_value_at_index(vaedecode_10, 0),
+                segs=get_value_at_index(impactsimpledetectorsegs_for_ad_156, 0),
+                basic_pipe=get_value_at_index(tobasicpipe_42, 0),
+            )
+
+            segspaste_49 = self.segspaste.doit(
+                feather=5,
+                alpha=255,
+                image=get_value_at_index(vaedecode_10, 0),
+                segs=get_value_at_index(segsdetailerforanimatediff_41, 0),
+            )
+
+            vhs_videocombine_51 = self.vhs_videocombine.combine_video(
+                frame_rate=8,
+                loop_count=0,
+                filename_prefix="face_detailer",
+                format="video/h264-mp4",
+                pingpong=False,
+                save_output=True,
+                images=get_value_at_index(segspaste_49, 0),
+                unique_id=7104489750160636615,
+            )
+
+
+
+        orig_video_path = sorted(glob(os.path.join(self.save_dir, 'orig*.mp4')))[-1]
+        face_detailer_video_path = sorted(glob(os.path.join(self.save_dir, 'face_detailer*.mp4')))[-1]
+    
+        json_config = {
+            "prompt": prompt,
+            "n_prompt": negative_prompt_text_box,
+            "id_embed_dropdown": id_embed_dropdown,
+            "gaussian_slider": gaussian_slider,
+            "seed_text_box": seed_text_box
+        }
+        return gr.Video.update(value=orig_video_path), gr.Video.update(value=face_detailer_video_path), gr.Json.update(value=json_config)
+
+
+
+
+    def run_t2v(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
+        category = "woman" if id_embed_dropdown in self.woman_id_embed_list else "man"
+        prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
+        print("prompt:", prompt)
+        print("negative_prompt_text_box:", negative_prompt_text_box)
+        print("id_embed_dropdown:", id_embed_dropdown)
+        print("gaussian_slider:", gaussian_slider)
+        print("seed_text_box:", seed_text_box)
+        seed_text_box = int(seed_text_box)
+        with torch.inference_mode():
+            cliptextencode = CLIPTextEncode()
+            cliptextencode_6 = cliptextencode.encode(
+                text=negative_prompt_text_box,
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+            )
+            cliptextencode_274 = cliptextencode.encode(
+                text=prompt,
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+            )
+            ade_animatediffloaderwithcontext_261 = (
+                            self.ade_animatediffloaderwithcontext.load_mm_and_inject_params(
+                                model_name="mm_sd_v15_v2.ckpt",
+                                beta_schedule="autoselect",
+                                motion_scale=1,
+                                apply_v2_models_properly=True,
+                                model=get_value_at_index(self.checkpointloadersimple_32, 0),
+                                context_options=get_value_at_index(
+                                    self.ade_animatediffuniformcontextoptions_102, 0
+                                ),
+                                motion_lora=get_value_at_index(self.ade_animatediffloraloader_196, 0),
+                            )
+                        )
+
+            freeu_v2_151 = self.freeu_v2.patch(
+                b1=1.1,
+                b2=1.2,
+                s1=0.9,
+                s2=0.4,
+                model=get_value_at_index(ade_animatediffloaderwithcontext_261, 0),
+            )
+
+            tobasicpipe_42 = self.tobasicpipe.doit(
+                model=get_value_at_index(freeu_v2_151, 0),
+                clip=get_value_at_index(self.checkpointloadersimple_32, 1),
+                vae=get_value_at_index(self.vaeloader_2, 0),
+                positive=get_value_at_index(cliptextencode_274, 0),
+                negative=get_value_at_index(cliptextencode_6, 0),
+            )
+
+            frombasicpipe_52 = self.frombasicpipe.doit(
+                basic_pipe=get_value_at_index(tobasicpipe_42, 0)
+            )
+
+            bnk_getsigma_254 = self.bnk_getsigma.calc_sigma(
+                sampler_name="dpmpp_2m",
+                scheduler="karras",
+                steps=20,
+                start_at_step=0,
+                end_at_step=20,
+                model=get_value_at_index(frombasicpipe_52, 0),
+            )
+
+            emptylatentimage_223 = self.emptylatentimage.generate(
+                width=512, height=512, batch_size=get_value_at_index(self.impactint_204, 0)
+            )
+
+            magicalbum3dgaussiannoise_262 = self.magicalbum3dgaussiannoise.generate(
+                width=512,
+                height=512,
+                batch_size=get_value_at_index(self.impactint_204, 0),
+                seed=seed_text_box,
+                cov_factor=gaussian_slider,
+            )
+
+            bnk_injectnoise_253 = self.bnk_injectnoise.inject_noise(
+                strength=get_value_at_index(bnk_getsigma_254, 0),
+                latents=get_value_at_index(emptylatentimage_223, 0),
+                noise=get_value_at_index(magicalbum3dgaussiannoise_262, 0),
+            )
+
+            ksampleradvanced_248 = self.ksampleradvanced.sample(
+                add_noise="disable",
+                noise_seed=seed_text_box,
+                steps=20,
+                cfg=8,
+                sampler_name="dpmpp_2m",
+                scheduler="karras",
+                start_at_step=0,
+                end_at_step=20,
+                return_with_leftover_noise="disable",
+                model=get_value_at_index(frombasicpipe_52, 0),
+                positive=get_value_at_index(frombasicpipe_52, 3),
+                negative=get_value_at_index(frombasicpipe_52, 4),
+                latent_image=get_value_at_index(bnk_injectnoise_253, 0),
+            )
+
+            vaedecode_10 = self.vaedecode.decode(
+                samples=get_value_at_index(ksampleradvanced_248, 0),
+                vae=get_value_at_index(frombasicpipe_52, 2),
+            )
+
+            vhs_videocombine_35 = self.vhs_videocombine.combine_video(
+                frame_rate=8,
+                loop_count=0,
+                filename_prefix="orig",
+                format="video/h264-mp4",
+                pingpong=False,
+                save_output=True,
+                images=get_value_at_index(vaedecode_10, 0),
+                unique_id=2001771405939721385,
+            )
+
+        orig_video_path = sorted(glob(os.path.join(self.save_dir, 'orig*.mp4')))[-1]
+    
+        json_config = {
+            "prompt": prompt,
+            "n_prompt": negative_prompt_text_box,
+            "id_embed_dropdown": id_embed_dropdown,
+            "gaussian_slider": gaussian_slider,
+            "seed_text_box": seed_text_box
+        }
+        return gr.Video.update(value=orig_video_path), gr.Json.update(value=json_config)
+
+
+
 import_custom_nodes()
 c = MagicMeController()
 
@@ -537,7 +843,7 @@ def ui():
             ### Quick Start
             1. Select desired `ID embedding`.
             2. Provide `Prompt` and `Negative Prompt`. Please use propoer pronoun for the character's gender.
-            4. Click `Generate`, wait for ~5 min, and enjoy.
+            3. Click on one of three `Go buttons. The fewer the running modules, the less time you need to wait. Enjoy!
             """
         )
         with gr.Row():
@@ -555,12 +861,14 @@ def ui():
                     with gr.Row():
                         gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
                     with gr.Row():
-                        seed_textbox = gr.Textbox( label="Seed",  value=-1)
+                        seed_textbox = gr.Textbox( label="Seed",  value=random.randint(1, 2 ** 32))
                         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
                         seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
                 json_config  = gr.Json(label="Config", value=None )
-                
-        generate_button = gr.Button( value="Generate", variant='primary' )
+        with gr.Row():
+            generate_button_t2v = gr.Button( value="Go (T2V VCD)", variant='primary' )
+            generate_button_face = gr.Button( value="Go (T2V + Face VCD)", variant='primary' )
+            generate_button_tiled = gr.Button( value="Go (T2V + Face + Tiled VCD)", variant='primary' )
         
         with gr.Row():
             orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
@@ -568,9 +876,13 @@ def ui():
             sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
 
         inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
-        outputs = [orig_video, face_detailer_video, sr_video, json_config]
+        outputs_t2v = [orig_video, json_config]
+        outputs_t2v_face = [orig_video, face_detailer_video, json_config]
+        outputs_t2v_face_tiled = [orig_video, face_detailer_video, sr_video, json_config]
         
-        generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
+        generate_button_t2v.click( fn=c.run_t2v, inputs=inputs, outputs=outputs_t2v )
+        generate_button_face.click( fn=c.run_t2v_face, inputs=inputs, outputs=outputs_t2v_face )
+        generate_button_tiled.click( fn=c.run_t2v_face_tiled, inputs=inputs, outputs=outputs_t2v_face_tiled )
                 
         # gr.Examples( fn=c.run_once, examples=examples, inputs=inputs, outputs=outputs, cache_examples=True )
         
