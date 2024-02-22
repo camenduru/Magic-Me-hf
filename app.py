@@ -242,7 +242,7 @@ class MagicMeController:
 
 
     def refresh_motion_lora_list(self):
-        motion_lora_list = glob(os.path.join(self.motion_lora_list, "*.ckpt"))
+        motion_lora_list = glob(os.path.join(self.motion_lora_dir, "*.ckpt"))
         self.motion_lora_list = [os.path.basename(p)for p in motion_lora_list]
 
 
@@ -912,7 +912,7 @@ def ui():
             generate_button_tiled = gr.Button( value="Go (T2V + Face + Tiled VCD, 8X slower)", variant='primary' )
         
         with gr.Row():
-            orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
+            orig_video = gr.Video( label="Video after T2V VCD", interactive=False )
             face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
             sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
 
