@@ -4,6 +4,7 @@ import sys
 from typing import Sequence, Mapping, Any, Union
 import torch
 import gradio as gr
+from glob import glob
 
 import logging.config
 LOGGING_CONFIG = {
@@ -149,6 +150,12 @@ from nodes import (
 
 class MagicMeController:
     def __init__(self):
+        self.id_embed_dir = "models/embeddings"
+        self.save_dir = "output"
+        self.id_embed_list = []
+        self.woman_id_embed_list = ["beyonce", "hermione", "lifeifei", "lisa", "mona", "monroe", "taylor", "scarlett"]
+        self.refresh_id_embed()
+        self.update_id_embed(self.id_embed_list[0])
         with torch.inference_mode():
             vaeloader = VAELoader()
             self.vaeloader_2 = vaeloader.load_vae(
@@ -218,15 +225,32 @@ class MagicMeController:
             self.ultimatesdupscale = NODE_CLASS_MAPPINGS["UltimateSDUpscale"]()
             self.imagecasharpening = NODE_CLASS_MAPPINGS["ImageCASharpening+"]()
 
-    def run_once(self, prompt_text_box, negative_prompt_text_box):
+
+
+    def refresh_id_embed(self):
+        id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
+        self.id_embed_list = [os.path.basename(p) for p in id_embed_list]
+
+    def update_id_embed(self, id_embed_dropdown):
+        self.selected_id_embed = id_embed_dropdown
+        return gr.Dropdown.update()    
+
+
+    def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown):
+        if self.selected_id_embed != id_embed_dropdown: self.update_id_embed(id_embed_dropdown)
+
+        category = "woman" if self.selected_id_embed in self.woman_id_embed_list else "man"
+        prompt = f"a photo of embedding:{self.selected_id_embed} {category} "  + prompt_text_box
+        print("prompt:", prompt)
+        print("negative_prompt_text_box:", negative_prompt_text_box)
         with torch.inference_mode():
             cliptextencode = CLIPTextEncode()
             cliptextencode_6 = cliptextencode.encode(
-                text="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream",
+                text=negative_prompt_text_box,
                 clip=get_value_at_index(self.checkpointloadersimple_32, 1),
             )
             cliptextencode_274 = cliptextencode.encode(
-                text="a photo of embedding:altman man in superman costume in the outer space, stars in the background",
+                text=prompt,
                 clip=get_value_at_index(self.checkpointloadersimple_32, 1),
             )
             ade_animatediffloaderwithcontext_261 = (
@@ -425,6 +449,18 @@ class MagicMeController:
                 unique_id=5059112282155244564,
             )
 
+
+        save_sample_path = sorted(glob(self.save_dir, 'SR*.mp4'))[-1]
+    
+        json_config = {
+            "prompt": prompt,
+            "n_prompt": negative_prompt_text_box,
+            "id_embed_dropdown": id_embed_dropdown,
+        }
+        return gr.Video.update(value=save_sample_path), gr.Json.update(value=json_config)
+
+
+
 import_custom_nodes()
 c = MagicMeController()
 
@@ -509,14 +545,16 @@ def ui():
         )
         with gr.Row():
             with gr.Column():
-                # base_model_dropdown     = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list,    value=c.base_model_list[0],    interactive=True )
+                # id_embed_dropdown     = gr.Dropdown( label="Base DreamBooth Model", choices=c.base_model_list,    value=c.base_model_list[0],    interactive=True )
                 # motion_module_dropdown  = gr.Dropdown( label="Motion Module",  choices=c.motion_module_list, value=c.motion_module_list[0], interactive=True )
 
-                # base_model_dropdown.change(fn=c.update_base_model,       inputs=[base_model_dropdown],    outputs=[base_model_dropdown])
+                # id_embed_dropdown.change(fn=c.update_base_model,       inputs=[id_embed_dropdown],    outputs=[id_embed_dropdown])
                 # motion_module_dropdown.change(fn=c.update_motion_module, inputs=[motion_module_dropdown], outputs=[motion_module_dropdown])
+                id_embed_dropdown = gr.Dropdown( label="ID Embedding", choices=c.id_embed_list,    value=c.id_embed_list[0],    interactive=True )
+                id_embed_dropdown.change(fn=c.update_id_embed,       inputs=[id_embed_dropdown],    outputs=[id_embed_dropdown])
 
-                prompt_textbox          = gr.Textbox( label="Prompt",          lines=3 )
-                negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="worst quality, low quality, nsfw, logo")
+                prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
+                negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
 
                 # with gr.Accordion("Advance", open=False):
                 #     with gr.Row():
@@ -533,7 +571,7 @@ def ui():
                 result_video = gr.Video( label="Generated Animation", interactive=False )
                 json_config  = gr.Json( label="Config", value=None )
 
-            inputs  = [prompt_textbox, negative_prompt_textbox]
+            inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown]
             outputs = [result_video, json_config]
             
             generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
