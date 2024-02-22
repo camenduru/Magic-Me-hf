@@ -547,6 +547,10 @@ def ui():
                 prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
 
+
+                
+
+            with gr.Column():
                 with gr.Accordion("Advance", open=False):
                     with gr.Row():
                         gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
@@ -554,15 +558,11 @@ def ui():
                         seed_textbox = gr.Textbox( label="Seed",  value=-1)
                         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
                         seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
-
-                
-
-            with gr.Column():
                 json_config  = gr.Json(label="Config", value=None )
                 
         generate_button = gr.Button( value="Generate", variant='primary' )
         
-        with gr.Column():
+        with gr.Row():
             orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
             face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
             sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
