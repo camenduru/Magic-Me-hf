@@ -555,18 +555,22 @@ def ui():
                         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
                         seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
 
-                generate_button = gr.Button( value="Generate", variant='primary' )
+                
 
             with gr.Column():
-                orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
-                face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
-                sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
                 json_config  = gr.Json(label="Config", value=None )
+                
+        generate_button = gr.Button( value="Generate", variant='primary' )
+        
+        with gr.Column():
+            orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
+            face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
+            sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
 
-            inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
-            outputs = [orig_video, face_detailer_video, sr_video, json_config]
-            
-            generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
+        inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
+        outputs = [orig_video, face_detailer_video, sr_video, json_config]
+        
+        generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
                 
         # gr.Examples( fn=c.run_once, examples=examples, inputs=inputs, outputs=outputs, cache_examples=True )
         
