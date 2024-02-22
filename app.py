@@ -5,6 +5,7 @@ from typing import Sequence, Mapping, Any, Union
 import torch
 import gradio as gr
 from glob import glob
+from pathlib import Path
 
 import logging.config
 LOGGING_CONFIG = {
@@ -229,14 +230,14 @@ class MagicMeController:
 
     def refresh_id_embed(self):
         id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
-        self.id_embed_list = [os.path.basename(p) for p in id_embed_list]
+        self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
     def update_id_embed(self, id_embed_dropdown):
         self.selected_id_embed = id_embed_dropdown
         return gr.Dropdown.update()    
 
 
-    def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown):
+    def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
         if self.selected_id_embed != id_embed_dropdown: self.update_id_embed(id_embed_dropdown)
 
         category = "woman" if self.selected_id_embed in self.woman_id_embed_list else "man"
@@ -304,8 +305,8 @@ class MagicMeController:
                 width=512,
                 height=512,
                 batch_size=get_value_at_index(self.impactint_204, 0),
-                seed=random.randint(1, 2**64),
-                cov_factor=0.15,
+                seed=seed_text_box,
+                cov_factor=gaussian_slider,
             )
 
             bnk_injectnoise_253 = self.bnk_injectnoise.inject_noise(
@@ -316,7 +317,7 @@ class MagicMeController:
 
             ksampleradvanced_248 = self.ksampleradvanced.sample(
                 add_noise="disable",
-                noise_seed=random.randint(1, 2**64),
+                noise_seed=seed_text_box,
                 steps=20,
                 cfg=8,
                 sampler_name="dpmpp_2m",
@@ -341,7 +342,7 @@ class MagicMeController:
                 filename_prefix="orig",
                 format="video/h264-mp4",
                 pingpong=False,
-                save_output=False,
+                save_output=True,
                 images=get_value_at_index(vaedecode_10, 0),
                 unique_id=2001771405939721385,
             )
@@ -366,7 +367,7 @@ class MagicMeController:
                 guide_size=512,
                 guide_size_for=False,
                 max_size=512,
-                seed=random.randint(1, 2**64),
+                seed=seed_text_box,
                 steps=20,
                 cfg=8,
                 sampler_name="euler",
@@ -391,7 +392,7 @@ class MagicMeController:
                 filename_prefix="face_detailer",
                 format="video/h264-mp4",
                 pingpong=False,
-                save_output=False,
+                save_output=True,
                 images=get_value_at_index(segspaste_49, 0),
                 unique_id=7104489750160636615,
             )
@@ -408,7 +409,7 @@ class MagicMeController:
 
             ultimatesdupscale_172 = self.ultimatesdupscale.upscale(
                 upscale_by=2,
-                seed=random.randint(1, 2**64),
+                seed=seed_text_box,
                 steps=20,
                 cfg=8,
                 sampler_name="euler",
@@ -450,14 +451,18 @@ class MagicMeController:
             )
 
 
-        save_sample_path = sorted(glob(self.save_dir, 'SR*.mp4'))[-1]
+        orig_video_path = sorted(glob(os.path.join(self.save_dir, 'orig*.mp4')))[-1]
+        face_detailer_video_path = sorted(glob(os.path.join(self.save_dir, 'face_detailer*.mp4')))[-1]
+        sr_video_path = sorted(glob(os.path.join(self.save_dir, 'SR*.mp4')))[-1]
     
         json_config = {
             "prompt": prompt,
             "n_prompt": negative_prompt_text_box,
             "id_embed_dropdown": id_embed_dropdown,
+            "gaussian_slider": gaussian_slider,
+            "seed_text_box": seed_text_box
         }
-        return gr.Video.update(value=save_sample_path), gr.Json.update(value=json_config)
+        return gr.Video.update(value=orig_video_path), gr.Video.update(value=face_detailer_video_path),gr.Video.update(value=sr_video_path), gr.Json.update(value=json_config)
 
 
 
@@ -556,23 +561,24 @@ def ui():
                 prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
 
-                # with gr.Accordion("Advance", open=False):
-                #     with gr.Row():
-                #         width_slider  = gr.Slider(  label="Width",  value=512, minimum=256, maximum=1024, step=64 )
-                #         height_slider = gr.Slider(  label="Height", value=512, minimum=256, maximum=1024, step=64 )
-                #     with gr.Row():
-                #         seed_textbox = gr.Textbox( label="Seed",  value=-1)
-                #         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
-                #         seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
+                with gr.Accordion("Advance", open=False):
+                    with gr.Row():
+                        gaussian_slider  = gr.Slider(  label="3D Gaussian Noise Covariance",  value=0.2, minimum=0, maximum=1, step=0.05 )
+                    with gr.Row():
+                        seed_textbox = gr.Textbox( label="Seed",  value=-1)
+                        seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
+                        seed_button.click(fn=lambda: gr.Textbox.update(value=random.randint(1, 1e16)), inputs=[], outputs=[seed_textbox])
 
                 generate_button = gr.Button( value="Generate", variant='primary' )
 
             with gr.Column():
-                result_video = gr.Video( label="Generated Animation", interactive=False )
-                json_config  = gr.Json( label="Config", value=None )
+                orig_video = gr.Video( label="Video after T2I VCD", interactive=False )
+                face_detailer_video = gr.Video( label="Video after Face VCD", interactive=False )
+                sr_video = gr.Video( label="Video after Tiled VCD", interactive=False )
+                json_config  = gr.Json(label="Config", value=None )
 
-            inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown]
-            outputs = [result_video, json_config]
+            inputs  = [prompt_textbox, negative_prompt_textbox, id_embed_dropdown, gaussian_slider, seed_textbox]
+            outputs = [orig_video, face_detailer_video, sr_video, json_config]
             
             generate_button.click( fn=c.run_once, inputs=inputs, outputs=outputs )
                 
