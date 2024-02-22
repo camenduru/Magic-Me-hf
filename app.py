@@ -156,7 +156,7 @@ class MagicMeController:
         self.id_embed_list = []
         self.woman_id_embed_list = ["beyonce", "hermione", "lifeifei", "lisa", "mona", "monroe", "taylor", "scarlett"]
         self.refresh_id_embed()
-        self.update_id_embed(self.id_embed_list[0])
+        
         with torch.inference_mode():
             vaeloader = VAELoader()
             self.vaeloader_2 = vaeloader.load_vae(
@@ -232,16 +232,9 @@ class MagicMeController:
         id_embed_list = glob(os.path.join(self.id_embed_dir, "*.pt"))
         self.id_embed_list = [Path(p).stem for p in id_embed_list]
 
-    def update_id_embed(self, id_embed_dropdown):
-        self.selected_id_embed = id_embed_dropdown
-        return gr.Dropdown.update()    
-
-
     def run_once(self, prompt_text_box, negative_prompt_text_box, id_embed_dropdown, gaussian_slider, seed_text_box):
-        if self.selected_id_embed != id_embed_dropdown: self.update_id_embed(id_embed_dropdown)
-
         category = "woman" if self.selected_id_embed in self.woman_id_embed_list else "man"
-        prompt = f"a photo of embedding:{self.selected_id_embed} {category} "  + prompt_text_box
+        prompt = f"a photo of embedding:{id_embed_dropdown} {category} "  + prompt_text_box
         print("prompt:", prompt)
         print("negative_prompt_text_box:", negative_prompt_text_box)
         print("id_embed_dropdown:", id_embed_dropdown)
@@ -535,6 +528,7 @@ def ui():
             """
             # Magic-Me: Identity-Specific Video Customized Diffusion
             Ze Ma*, Daquan Zhou* †, Chun-Hsiao Yeh, Xue-She Wang, Xiuyu Li, Huanrui Yang, Zhen Dong †, Kurt Keutzer, Jiashi Feng (*Joint First Author, † Corresponding Author)
+            
             [Arxiv Report](https://arxiv.org/abs/2402.09368) | [Project Page](https://magic-me-webpage.github.io/) | [Github](https://github.com/Zhen-Dong/Magic-Me)
             """
         )
@@ -549,7 +543,6 @@ def ui():
         with gr.Row():
             with gr.Column():
                 id_embed_dropdown = gr.Dropdown( label="ID Embedding", choices=c.id_embed_list,    value=c.id_embed_list[0],    interactive=True )
-                id_embed_dropdown.change(fn=c.update_id_embed,       inputs=[id_embed_dropdown],    outputs=[id_embed_dropdown])
 
                 prompt_textbox          = gr.Textbox( label="Prompt", info="a photo of <V*> man/woman ",          lines=3, value="in superman costume in the outer space, stars in the background" )
                 negative_prompt_textbox = gr.Textbox( label="Negative Prompt", lines=3, value="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, UnrealisticDream")
