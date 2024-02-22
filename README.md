@@ -3,8 +3,11 @@ title: Magic-Me
 emoji: 🚀
 colorFrom: purple
 colorTo: gray
-sdk: docker
 app_port: 7860
+sdk: gradio
+sdk_version: 3.37.0
+app_file: app.py
+pinned: false
 ---
 
 
