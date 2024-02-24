@@ -925,7 +925,7 @@ def ui():
         generate_button_face.click( fn=c.run_t2v_face, inputs=inputs, outputs=outputs_t2v_face )
         generate_button_tiled.click( fn=c.run_t2v_face_tiled, inputs=inputs, outputs=outputs_t2v_face_tiled )
                 
-        gr.Examples( fn=c.run_t2v_face_tiled, examples=examples, inputs=inputs, outputs=outputs_t2v_face_tiled, cache_examples=True )
+        gr.Examples( fn=c.run_t2v_face_tiled, examples=examples, inputs=inputs, outputs=outputs_t2v_face_tiled, cache_examples=False )
         
     return demo
 
