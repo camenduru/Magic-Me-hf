@@ -931,6 +931,12 @@ def ui():
 
 
 if __name__ == "__main__":
+    from pyngrok import ngrok, conf
+    NGROK_TOKEN = os.environ.get('NGROK_TOKEN')
+    conf.get_default().auth_token = NGROK_TOKEN
+    public_url = ngrok.connect(7861).public_url
+    print(public_url)
+
     demo = ui()
     demo.queue(max_size=20)
-    demo.launch(share=True)
+    demo.launch(server_port=7861, inline=False, share=False, debug=True)
